@@ -12,6 +12,7 @@ type BookingStore interface {
 	InsertBooking(context.Context, *types.Booking) (*types.Booking, error)
 	GetBookings(context.Context, bson.M) ([]*types.Booking, error)
 	GetBookingByID(context.Context, string) (*types.Booking, error)
+	UpdateBooking(context.Context, bson.M, bson.M) error
 }
 
 type MongoBookingStore struct {
@@ -24,6 +25,11 @@ func NewMongoBookingStore(client *mongo.Client) *MongoBookingStore {
 		client:     client,
 		collection: client.Database(DBNAME).Collection(bookingCollection),
 	}
+}
+
+func (s *MongoBookingStore) UpdateBooking(ctx context.Context, filter bson.M, update bson.M) error {
+	_, err := s.collection.UpdateOne(ctx, filter, update)
+	return err
 }
 
 func (s *MongoBookingStore) GetBookingByID(ctx context.Context, id string) (*types.Booking, error) {

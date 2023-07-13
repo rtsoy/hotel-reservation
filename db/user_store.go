@@ -21,7 +21,7 @@ type UserStore interface {
 	GetUsers(context.Context) ([]*types.User, error)
 	InsertUser(context.Context, *types.User) (*types.User, error)
 	DeleteUser(context.Context, string) error
-	UpdateUser(context.Context, bson.M, types.UpdateUserParams) error
+	UpdateUser(context.Context, bson.M, bson.M) error
 }
 
 type MongoUserStore struct {
@@ -57,23 +57,9 @@ func (s *MongoUserStore) GetUserByEmail(ctx context.Context, email string) (*typ
 	return &user, nil
 }
 
-func (s *MongoUserStore) UpdateUser(ctx context.Context, filter bson.M, values types.UpdateUserParams) error {
-	update := bson.D{
-		{
-			"$set", values.ToBSON(),
-		},
-	}
-
-	res, err := s.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return err
-	}
-
-	if res.MatchedCount == 0 {
-		return mongo.ErrNoDocuments
-	}
-
-	return nil
+func (s *MongoUserStore) UpdateUser(ctx context.Context, filter bson.M, update bson.M) error {
+	_, err := s.collection.UpdateOne(ctx, filter, update)
+	return err
 }
 
 func (s *MongoUserStore) DeleteUser(ctx context.Context, id string) error {

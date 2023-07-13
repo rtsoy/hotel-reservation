@@ -36,11 +36,11 @@ func (h *UserHandler) HandlePutUser(c *fiber.Ctx) error {
 	}
 
 	filter := bson.M{"_id": oid}
-	if err := h.userStore.UpdateUser(c.Context(), filter, values); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return errors.New("not found")
-		}
+	update := bson.M{
+		"$set": values.ToBSON(),
+	}
 
+	if err := h.userStore.UpdateUser(c.Context(), filter, update); err != nil {
 		return err
 	}
 
