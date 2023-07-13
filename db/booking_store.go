@@ -27,6 +27,13 @@ func NewMongoBookingStore(client *mongo.Client) *MongoBookingStore {
 	}
 }
 
+func NewMongoTestBookingStore(client *mongo.Client) *MongoBookingStore {
+	return &MongoBookingStore{
+		client:     client,
+		collection: client.Database(TestDBNAME).Collection(bookingCollection),
+	}
+}
+
 func (s *MongoBookingStore) UpdateBooking(ctx context.Context, filter bson.M, update bson.M) error {
 	_, err := s.collection.UpdateOne(ctx, filter, update)
 	return err

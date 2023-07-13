@@ -2,51 +2,21 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
-	"github.com/rtsoy/hotel-reservation/db"
-	"github.com/rtsoy/hotel-reservation/types"
+	"github.com/rtsoy/hotel-reservation/db/fixtures"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 )
 
-func insertTestUser(userStore db.UserStore, params types.CreateUserParams) (*types.User, error) {
-	userParams := types.CreateUserParams{
-		FirstName: params.FirstName,
-		LastName:  params.LastName,
-		Email:     params.Email,
-		Password:  params.Password,
-	}
-
-	user, err := types.NewUserFromParams(userParams)
-	if err != nil {
-		return nil, err
-	}
-
-	insertedUser, err := userStore.InsertUser(context.TODO(), user)
-	if err != nil {
-		return nil, err
-	}
-
-	return insertedUser, nil
-}
-
 func TestAuthenticateSuccess(t *testing.T) {
 	tdb := setup(t)
 	defer tdb.teardown(t, tdb.client)
 
-	insertedUser, err := insertTestUser(tdb.store.User, types.CreateUserParams{
-		FirstName: "James",
-		LastName:  "Harden",
-		Email:     "jamesHarden13@example.com",
-		Password:  "super_secret_password",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	insertedUser := fixtures.AddUser(tdb.store, "James", "Harden",
+		"jamesHarden13@example.com", "super_secret_password", false)
 
 	app := fiber.New()
 	authHandler := NewAuthHandler(tdb.store.User)
@@ -89,15 +59,8 @@ func TestAuthenticateWithWrongPasswordFailure(t *testing.T) {
 	tdb := setup(t)
 	defer tdb.teardown(t, tdb.client)
 
-	_, err := insertTestUser(tdb.store.User, types.CreateUserParams{
-		FirstName: "James",
-		LastName:  "Harden",
-		Email:     "jamesHarden13@example.com",
-		Password:  "super_secret_password",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	_ = fixtures.AddUser(tdb.store, "James", "Harden",
+		"jamesHarden13@example.com", "super_secret_password", false)
 
 	app := fiber.New()
 	authHandler := NewAuthHandler(tdb.store.User)

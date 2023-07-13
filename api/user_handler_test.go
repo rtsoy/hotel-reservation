@@ -2,44 +2,14 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
-	"github.com/rtsoy/hotel-reservation/db"
+	"github.com/rtsoy/hotel-reservation/db/fixtures"
 	"github.com/rtsoy/hotel-reservation/types"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
-
-type testdb struct {
-	client *mongo.Client
-	store  *db.Store
-}
-
-func (tdb *testdb) teardown(t *testing.T, client *mongo.Client) {
-	if err := client.Database(db.TestDBNAME).Drop(context.TODO()); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func setup(t *testing.T) *testdb {
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return &testdb{
-		client: client,
-		store: &db.Store{
-			User:  db.NewMongoTestUserStore(client),
-			Hotel: db.NewMongoTestHotelStore(client),
-			Room:  db.NewMongoTestRoomStore(client, db.NewMongoTestHotelStore(client)),
-		},
-	}
-}
 
 func TestPostUser(t *testing.T) {
 	tdb := setup(t)
@@ -95,25 +65,11 @@ func TestGetUsers(t *testing.T) {
 	userHandler := NewUserHandler(tdb.store.User)
 	app.Get("/", userHandler.HandleGetUsers)
 
-	_, err := insertTestUser(tdb.store.User, types.CreateUserParams{
-		FirstName: "user1",
-		LastName:  "user1",
-		Email:     "user1@example.com",
-		Password:  "user1password",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	_ = fixtures.AddUser(tdb.store, "user1", "user1",
+		"user1@example.com", "user1password", false)
 
-	_, err = insertTestUser(tdb.store.User, types.CreateUserParams{
-		FirstName: "user2",
-		LastName:  "user2",
-		Email:     "user2@example.com",
-		Password:  "user2password",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	_ = fixtures.AddUser(tdb.store, "user2", "user2",
+		"user2@example.com", "user2password", false)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Add("Content-Type", "application/json")
@@ -141,15 +97,8 @@ func TestGetUser(t *testing.T) {
 	userHandler := NewUserHandler(tdb.store.User)
 	app.Get("/:id", userHandler.HandleGetUser)
 
-	expectedUser, err := insertTestUser(tdb.store.User, types.CreateUserParams{
-		FirstName: "James",
-		LastName:  "Harden",
-		Email:     "jamesHarden13@example.com",
-		Password:  "qwerty123",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	expectedUser := fixtures.AddUser(tdb.store, "James", "Harden",
+		"jamesHarden13@example.com", "qwerty123", false)
 
 	targetURL := "/" + expectedUser.ID.Hex()
 
@@ -188,15 +137,9 @@ func TestUpdateUser(t *testing.T) {
 	userHandler := NewUserHandler(tdb.store.User)
 	app.Put("/:id", userHandler.HandlePutUser)
 
-	user, err := insertTestUser(tdb.store.User, types.CreateUserParams{
-		FirstName: "James",
-		LastName:  "Harden",
-		Email:     "jamesHarden13@example.com",
-		Password:  "qwerty123",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	user := fixtures.AddUser(tdb.store, "James", "Harden",
+		"jamesHarden13@example.com", "qwerty123", false)
+
 	userID := user.ID.Hex()
 
 	params := types.UpdateUserParams{
@@ -237,15 +180,9 @@ func TestDeleteUser(t *testing.T) {
 	userHandler := NewUserHandler(tdb.store.User)
 	app.Delete("/:id", userHandler.HandleDeleteUser)
 
-	user, err := insertTestUser(tdb.store.User, types.CreateUserParams{
-		FirstName: "James",
-		LastName:  "Harden",
-		Email:     "jamesHarden13@example.com",
-		Password:  "qwerty123",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	user := fixtures.AddUser(tdb.store, "James", "Harden",
+		"jamesHarden13@example.com", "qwerty123", false)
+
 	userID := user.ID.Hex()
 
 	targetURL := "/" + userID

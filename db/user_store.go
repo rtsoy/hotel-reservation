@@ -2,20 +2,13 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"github.com/rtsoy/hotel-reservation/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Dropper interface {
-	Drop(context.Context) error
-}
-
 type UserStore interface {
-	Dropper
-
 	GetUserByID(context.Context, string) (*types.User, error)
 	GetUserByEmail(context.Context, string) (*types.User, error)
 	GetUsers(context.Context) ([]*types.User, error)
@@ -41,11 +34,6 @@ func NewMongoTestUserStore(client *mongo.Client) *MongoUserStore {
 		client:     client,
 		collection: client.Database(TestDBNAME).Collection(userCollection),
 	}
-}
-
-func (s *MongoUserStore) Drop(ctx context.Context) error {
-	fmt.Println("-- dropping user collection --")
-	return s.collection.Drop(ctx)
 }
 
 func (s *MongoUserStore) GetUserByEmail(ctx context.Context, email string) (*types.User, error) {
