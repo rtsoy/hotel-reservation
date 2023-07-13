@@ -51,11 +51,13 @@ func main() {
 
 		apiv1 = app.Group("/api/v1", middleware.JWTAuthentication(userStore))
 		auth  = app.Group("/api")
+		admin = apiv1.Group("/admin", middleware.AdminAuth)
 
-		userHandler  = api.NewUserHandler(userStore)
-		authHandler  = api.NewAuthHandler(userStore)
-		hotelHandler = api.NewHotelHandler(store)
-		roomHandler  = api.NewRoomHandler(store)
+		userHandler    = api.NewUserHandler(userStore)
+		authHandler    = api.NewAuthHandler(userStore)
+		hotelHandler   = api.NewHotelHandler(store)
+		roomHandler    = api.NewRoomHandler(store)
+		bookingHandler = api.NewBookingHandler(store)
 	)
 
 	// Auth Handlers
@@ -80,6 +82,14 @@ func main() {
 
 	apiv1.Get("/room", roomHandler.HandleGetRooms)
 	apiv1.Post("/room/:id/book", roomHandler.HandleBookRoom)
+
+	// Bookings Handlers
+
+	apiv1.Get("/booking/:id", bookingHandler.HandleGetBooking)
+
+	// Admin Routes
+
+	admin.Get("/booking", bookingHandler.HandleGetBookings)
 
 	log.Fatal(app.Listen(*listenAddr))
 }

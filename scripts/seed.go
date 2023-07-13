@@ -19,7 +19,7 @@ var (
 	ctx        = context.Background()
 )
 
-func seedUser(firstName, lastName, email, password string) {
+func seedUser(isAdmin bool, firstName, lastName, email, password string) {
 	userParams := types.CreateUserParams{
 		FirstName: firstName,
 		LastName:  lastName,
@@ -31,6 +31,8 @@ func seedUser(firstName, lastName, email, password string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	user.IsAdmin = isAdmin
 
 	insertUser, err := userStore.InsertUser(ctx, user)
 	if err != nil {
@@ -88,9 +90,9 @@ func main() {
 	client.Database(db.DBNAME).Collection("hotels").Drop(ctx)
 	client.Database(db.DBNAME).Collection("rooms").Drop(ctx)
 
-	seedUser("Lebron", "James", "legoat6@gmail.com", "goat6")
-	seedUser("Kevin", "Durant", "traykd35@gmail.com", "goat35")
-	seedUser("Steph", "Curry", "chiefCurry@gmail.com", "goat30")
+	seedUser(true, "Lebron", "James", "legoat6@gmail.com", "goat6")
+	seedUser(false, "Kevin", "Durant", "traykd35@gmail.com", "goat35")
+	seedUser(false, "Steph", "Curry", "chiefCurry@gmail.com", "goat30")
 
 	seedHotel("Bellucia", "France", 4)
 	seedHotel("The Cozy Hotel", "Amsterdam", 3)
