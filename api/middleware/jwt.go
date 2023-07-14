@@ -6,6 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rtsoy/hotel-reservation/db"
 	"log"
+	"net/http"
 	"os"
 	"time"
 )
@@ -14,27 +15,27 @@ func JWTAuthentication(userStore db.UserStore) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token, ok := c.GetReqHeaders()["X-Api-Token"]
 		if !ok {
-			return fmt.Errorf("unauthtorized")
+			return c.Status(http.StatusUnauthorized).JSON("no token")
 		}
 
 		claims, err := validateToken(token)
 		if err != nil {
-			return err
+			return c.Status(http.StatusUnauthorized).JSON(err.Error())
 		}
 
 		expires := claims["expires"]
 		parsedTime, err := time.Parse(time.RFC3339, expires.(string))
 		if err != nil {
-			return err
+			return c.Status(http.StatusUnauthorized).JSON("token expired")
 		}
 		if time.Now().After(parsedTime) {
-			return fmt.Errorf("token expired")
+			return c.Status(http.StatusUnauthorized).JSON("token expired")
 		}
 
 		userID := claims["userID"].(string)
 		user, err := userStore.GetUserByID(c.Context(), userID)
 		if err != nil {
-			return fmt.Errorf("unauthtorized")
+			return c.Status(http.StatusUnauthorized).JSON("unauthorized")
 		}
 
 		// Set the current authenticated user to the context value

@@ -73,9 +73,9 @@ func (h *BookingHandler) HandleGetBooking(c *fiber.Ctx) error {
 
 	user, ok := getAuthUser(c)
 	if !ok {
-		return fmt.Errorf("unauthorized")
+		return c.Status(http.StatusUnauthorized).JSON("unauthorized")
 	}
-	if booking.UserID != user.ID {
+	if !user.IsAdmin && booking.UserID != user.ID {
 		return c.Status(http.StatusForbidden).JSON(genericResp{
 			Type: "error",
 			Msg:  "not allowed",
