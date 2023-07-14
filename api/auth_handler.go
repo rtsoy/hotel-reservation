@@ -4,11 +4,11 @@ import (
 	"errors"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
+	myErrors "github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
 	"github.com/rtsoy/hotel-reservation/types"
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
-	"net/http"
 	"os"
 	"time"
 )
@@ -33,29 +33,23 @@ type AuthResponse struct {
 	Token string      `json:"token"`
 }
 
-func invalidCredentials(c *fiber.Ctx) error {
-	return c.Status(http.StatusBadRequest).JSON(genericResp{
-		Type: "error",
-		Msg:  "invalid credentials",
-	})
-}
-
 func (h *AuthHandler) HandleAuthenticate(c *fiber.Ctx) error {
 	var params AuthParams
 	if err := c.BodyParser(&params); err != nil {
-		return err
+		return myErrors.ErrBadRequest()
 	}
 
 	user, err := h.userStore.GetUserByEmail(c.Context(), params.Email)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return invalidCredentials(c)
+			return myErrors.ErrWrongCredentials()
 		}
+
 		return err
 	}
 
 	if !types.IsPasswordValid(user.EncryptedPassword, params.Password) {
-		return invalidCredentials(c)
+		return myErrors.ErrWrongCredentials()
 	}
 
 	response := AuthResponse{

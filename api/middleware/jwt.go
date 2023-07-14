@@ -6,6 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"os"
 	"time"
@@ -33,7 +34,13 @@ func JWTAuthentication(userStore db.UserStore) fiber.Handler {
 		}
 
 		userID := claims["userID"].(string)
-		user, err := userStore.GetUserByID(c.Context(), userID)
+
+		oid, err := primitive.ObjectIDFromHex(userID)
+		if err != nil {
+			return errors.ErrInvalidID()
+		}
+
+		user, err := userStore.GetUserByID(c.Context(), oid)
 		if err != nil {
 			return errors.ErrUnauthorized()
 		}

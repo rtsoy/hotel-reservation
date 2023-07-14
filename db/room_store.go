@@ -46,6 +46,10 @@ func (s *MongoRoomStore) GetRooms(ctx context.Context, filter bson.M) ([]*types.
 		return nil, err
 	}
 
+	if len(rooms) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+
 	return rooms, nil
 }
 

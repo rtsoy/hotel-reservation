@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"github.com/gofiber/fiber/v2"
 	"net/http"
 )
@@ -14,7 +15,11 @@ func ErrorHandler(c *fiber.Ctx, err error) error {
 	if apiError, ok := err.(Error); ok {
 		return c.Status(apiError.Code).JSON(apiError)
 	}
-	someError := NewError(http.StatusInternalServerError, err.Error())
+	if errors.Is(err, fiber.ErrMethodNotAllowed) {
+		methodNotAllowedErr := NewError(fiber.StatusMethodNotAllowed, "Method Not Allowed") // 405
+		return c.Status(methodNotAllowedErr.Code).JSON(methodNotAllowedErr)
+	}
+	someError := NewError(http.StatusInternalServerError, err.Error()) // 500
 	return c.Status(someError.Code).JSON(someError)
 }
 
@@ -26,6 +31,13 @@ func NewError(code int, msg string) Error {
 	return Error{
 		Code:    code,
 		Message: msg,
+	}
+}
+
+func ErrWrongCredentials() Error {
+	return Error{
+		Code:    http.StatusBadRequest, // 400
+		Message: "Wrong Credentials",
 	}
 }
 

@@ -53,11 +53,20 @@ func (s *MongoHotelStore) GetHotels(ctx context.Context, filter bson.M) ([]*type
 		return nil, err
 	}
 
+	if len(hotels) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+
 	return hotels, nil
 }
 
 func (s *MongoHotelStore) UpdateHotel(ctx context.Context, filter bson.M, update bson.M) error {
-	_, err := s.collection.UpdateOne(ctx, filter, update)
+	res, err := s.collection.UpdateOne(ctx, filter, update)
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
 	return err
 }
 

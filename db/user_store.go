@@ -9,11 +9,11 @@ import (
 )
 
 type UserStore interface {
-	GetUserByID(context.Context, string) (*types.User, error)
+	GetUserByID(context.Context, primitive.ObjectID) (*types.User, error)
 	GetUserByEmail(context.Context, string) (*types.User, error)
 	GetUsers(context.Context) ([]*types.User, error)
 	InsertUser(context.Context, *types.User) (*types.User, error)
-	DeleteUser(context.Context, string) error
+	DeleteUser(context.Context, primitive.ObjectID) error
 	UpdateUser(context.Context, bson.M, bson.M) error
 }
 
@@ -46,16 +46,19 @@ func (s *MongoUserStore) GetUserByEmail(ctx context.Context, email string) (*typ
 }
 
 func (s *MongoUserStore) UpdateUser(ctx context.Context, filter bson.M, update bson.M) error {
-	_, err := s.collection.UpdateOne(ctx, filter, update)
-	return err
-}
-
-func (s *MongoUserStore) DeleteUser(ctx context.Context, id string) error {
-	oid, err := primitive.ObjectIDFromHex(id)
+	res, err := s.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
 
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
+func (s *MongoUserStore) DeleteUser(ctx context.Context, oid primitive.ObjectID) error {
 	res, err := s.collection.DeleteOne(ctx, bson.M{"_id": oid})
 	if err != nil {
 		return err
@@ -98,12 +101,7 @@ func (s *MongoUserStore) GetUsers(ctx context.Context) ([]*types.User, error) {
 
 }
 
-func (s *MongoUserStore) GetUserByID(ctx context.Context, id string) (*types.User, error) {
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-
+func (s *MongoUserStore) GetUserByID(ctx context.Context, oid primitive.ObjectID) (*types.User, error) {
 	var user types.User
 	if err := s.collection.FindOne(ctx, bson.M{"_id": oid}).Decode(&user); err != nil {
 		return nil, err

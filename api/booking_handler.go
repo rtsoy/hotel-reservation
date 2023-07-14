@@ -1,12 +1,13 @@
 package api
 
 import (
+	"errors"
 	"github.com/gofiber/fiber/v2"
-	"github.com/rtsoy/hotel-reservation/api/errors"
+	myErrors "github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"net/http"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type BookingHandler struct {
@@ -24,22 +25,25 @@ func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.ErrInvalidID()
+		return myErrors.ErrInvalidID()
 	}
 
-	// TODO : 404
 	booking, err := h.store.Booking.GetBookingByID(c.Context(), oid)
 	if err != nil {
-		return errors.ErrResourceNotFound()
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return myErrors.ErrResourceNotFound()
+		}
+
+		return err
 	}
 
 	user, ok := getAuthUser(c)
 	if !ok {
-		return errors.ErrUnauthorized()
+		return myErrors.ErrUnauthorized()
 	}
 
 	if !user.IsAdmin && booking.UserID != user.ID {
-		return errors.ErrForbidden()
+		return myErrors.ErrForbidden()
 	}
 
 	filter := bson.M{"_id": booking.ID}
@@ -59,10 +63,13 @@ func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 }
 
 func (h *BookingHandler) HandleGetBookings(c *fiber.Ctx) error {
-	// TODO: 404
 	bookings, err := h.store.Booking.GetBookings(c.Context(), nil)
 	if err != nil {
-		return errors.ErrResourceNotFound()
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return myErrors.ErrResourceNotFound()
+		}
+
+		return err
 	}
 
 	return c.JSON(bookings)
@@ -73,24 +80,24 @@ func (h *BookingHandler) HandleGetBooking(c *fiber.Ctx) error {
 
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return errors.ErrInvalidID()
+		return myErrors.ErrInvalidID()
 	}
 
-	// TODO : 404
 	booking, err := h.store.Booking.GetBookingByID(c.Context(), oid)
 	if err != nil {
-		return errors.ErrResourceNotFound()
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return myErrors.ErrResourceNotFound()
+		}
+
+		return myErrors.ErrResourceNotFound()
 	}
 
 	user, ok := getAuthUser(c)
 	if !ok {
-		return c.Status(http.StatusUnauthorized).JSON("unauthorized")
+		return myErrors.ErrUnauthorized()
 	}
 	if !user.IsAdmin && booking.UserID != user.ID {
-		return c.Status(http.StatusForbidden).JSON(genericResp{
-			Type: "error",
-			Msg:  "not allowed",
-		})
+		return myErrors.ErrForbidden()
 	}
 
 	return c.JSON(booking)

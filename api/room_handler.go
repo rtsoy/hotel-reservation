@@ -2,13 +2,15 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
-	"github.com/rtsoy/hotel-reservation/api/errors"
+	myErrors "github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
 	"github.com/rtsoy/hotel-reservation/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
 )
 
@@ -23,9 +25,12 @@ func NewRoomHandler(store *db.Store) *RoomHandler {
 }
 
 func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
-	// TODO : 404
 	rooms, err := h.store.Room.GetRooms(c.Context(), nil)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return myErrors.ErrResourceNotFound()
+		}
+
 		return err
 	}
 
@@ -35,22 +40,22 @@ func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
 func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 	var params types.BookRoomParams
 	if err := c.BodyParser(&params); err != nil {
-		return errors.ErrBadRequest()
+		return myErrors.ErrBadRequest()
 	}
 
 	if err := params.Validate(); err != nil {
-		return errors.NewError(http.StatusBadRequest, err.Error())
+		return myErrors.NewError(http.StatusBadRequest, err.Error())
 	}
 
 	roomID := c.Params("id")
 	roomOID, err := primitive.ObjectIDFromHex(roomID)
 	if err != nil {
-		return errors.ErrInvalidID()
+		return myErrors.ErrInvalidID()
 	}
 
 	user, ok := getAuthUser(c)
 	if !ok {
-		return errors.ErrUnauthorized()
+		return myErrors.ErrUnauthorized()
 	}
 
 	available, err := isRoomAvailableForBooking(c.Context(), h.store.Booking, roomOID, params)
@@ -58,7 +63,7 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 		return err
 	}
 	if !available {
-		return errors.NewError(http.StatusBadRequest, fmt.Sprintf("Room %s is already booked", roomID))
+		return myErrors.NewError(http.StatusBadRequest, fmt.Sprintf("Room %s is already booked", roomID))
 	}
 
 	booking := &types.Booking{
@@ -89,7 +94,7 @@ func isRoomAvailableForBooking(ctx context.Context, bookingStore db.BookingStore
 	}
 
 	bookings, err := bookingStore.GetBookings(ctx, filter)
-	if err != nil {
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		return false, err
 	}
 

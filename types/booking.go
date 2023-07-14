@@ -14,10 +14,10 @@ type BookRoomParams struct {
 
 func (brp BookRoomParams) Validate() error {
 	if brp.FromDate.After(brp.TillDate) {
-		return fmt.Errorf("from date cannot be after till date")
+		return fmt.Errorf("From date cannot be after till date")
 	}
 	if time.Now().After(brp.FromDate) {
-		return fmt.Errorf("cannot book a room in the past")
+		return fmt.Errorf("Cannot book a room in the past")
 	}
 
 	return nil

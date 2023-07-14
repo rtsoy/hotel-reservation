@@ -35,7 +35,12 @@ func NewMongoTestBookingStore(client *mongo.Client) *MongoBookingStore {
 }
 
 func (s *MongoBookingStore) UpdateBooking(ctx context.Context, filter bson.M, update bson.M) error {
-	_, err := s.collection.UpdateOne(ctx, filter, update)
+	res, err := s.collection.UpdateOne(ctx, filter, update)
+
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
 	return err
 }
 
@@ -57,6 +62,10 @@ func (s *MongoBookingStore) GetBookings(ctx context.Context, filter bson.M) ([]*
 	var bookings []*types.Booking
 	if err := cur.All(ctx, &bookings); err != nil {
 		return nil, err
+	}
+
+	if len(bookings) == 0 {
+		return nil, mongo.ErrNoDocuments
 	}
 
 	return bookings, nil
