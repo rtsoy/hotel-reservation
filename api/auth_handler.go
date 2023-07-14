@@ -33,11 +33,6 @@ type AuthResponse struct {
 	Token string      `json:"token"`
 }
 
-type genericResp struct {
-	Type string `json:"type"`
-	Msg  string `json:"msg"`
-}
-
 func invalidCredentials(c *fiber.Ctx) error {
 	return c.Status(http.StatusBadRequest).JSON(genericResp{
 		Type: "error",

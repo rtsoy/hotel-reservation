@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,7 +21,13 @@ func NewHotelHandler(store *db.Store) *HotelHandler {
 func (h *HotelHandler) HandleGetHotel(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	hotel, err := h.store.Hotel.GetHotelByID(c.Context(), id)
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.ErrInvalidID()
+	}
+
+	// TODO : 404
+	hotel, err := h.store.Hotel.GetHotelByID(c.Context(), oid)
 	if err != nil {
 		return err
 	}
@@ -33,10 +40,11 @@ func (h *HotelHandler) HandleGetRooms(c *fiber.Ctx) error {
 
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return errors.ErrInvalidID()
 	}
 	filter := bson.M{"hotelID": oid}
 
+	// TODO : 404
 	rooms, err := h.store.Room.GetRooms(c.Context(), filter)
 	if err != nil {
 		return err
@@ -58,6 +66,7 @@ func QueriesToBSON(queries map[string]string) bson.M {
 func (h *HotelHandler) HandleGetHotels(c *fiber.Ctx) error {
 	filter := QueriesToBSON(c.Queries())
 
+	// TODO : 404
 	hotels, err := h.store.Hotel.GetHotels(c.Context(), filter)
 	if err != nil {
 		return err

@@ -6,18 +6,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/rtsoy/hotel-reservation/api"
+	"github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/api/middleware"
 	"github.com/rtsoy/hotel-reservation/db"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 )
-
-var fiberConfig = fiber.Config{
-	ErrorHandler: func(c *fiber.Ctx, err error) error {
-		return c.JSON(map[string]string{"error": err.Error()})
-	},
-}
 
 func init() {
 	if err := godotenv.Load(); err != nil {
@@ -35,7 +30,9 @@ func main() {
 	}
 
 	var (
-		app = fiber.New(fiberConfig)
+		app = fiber.New(fiber.Config{
+			ErrorHandler: errors.ErrorHandler,
+		})
 
 		hotelStore   = db.NewMongoHotelStore(client)
 		roomStore    = db.NewMongoRoomStore(client, hotelStore)

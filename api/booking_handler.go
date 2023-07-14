@@ -1,10 +1,11 @@
 package api
 
 import (
-	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 )
 
@@ -21,21 +22,24 @@ func NewBookingHandler(store *db.Store) *BookingHandler {
 func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	booking, err := h.store.Booking.GetBookingByID(c.Context(), id)
+	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return errors.ErrInvalidID()
+	}
+
+	// TODO : 404
+	booking, err := h.store.Booking.GetBookingByID(c.Context(), oid)
+	if err != nil {
+		return errors.ErrResourceNotFound()
 	}
 
 	user, ok := getAuthUser(c)
 	if !ok {
-		return fmt.Errorf("unauthorized")
+		return errors.ErrUnauthorized()
 	}
 
 	if !user.IsAdmin && booking.UserID != user.ID {
-		return c.Status(http.StatusForbidden).JSON(genericResp{
-			Type: "error",
-			Msg:  "not allowed",
-		})
+		return errors.ErrForbidden()
 	}
 
 	filter := bson.M{"_id": booking.ID}
@@ -55,9 +59,10 @@ func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 }
 
 func (h *BookingHandler) HandleGetBookings(c *fiber.Ctx) error {
+	// TODO: 404
 	bookings, err := h.store.Booking.GetBookings(c.Context(), nil)
 	if err != nil {
-		return err
+		return errors.ErrResourceNotFound()
 	}
 
 	return c.JSON(bookings)
@@ -66,9 +71,15 @@ func (h *BookingHandler) HandleGetBookings(c *fiber.Ctx) error {
 func (h *BookingHandler) HandleGetBooking(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	booking, err := h.store.Booking.GetBookingByID(c.Context(), id)
+	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return errors.ErrInvalidID()
+	}
+
+	// TODO : 404
+	booking, err := h.store.Booking.GetBookingByID(c.Context(), oid)
+	if err != nil {
+		return errors.ErrResourceNotFound()
 	}
 
 	user, ok := getAuthUser(c)

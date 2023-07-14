@@ -24,8 +24,8 @@ func main() {
 	admin := fixtures.AddUser(store, "Admin", "Admin",
 		"admin@example.org", "admin", true)
 
-	fmt.Printf("%s - user\n", user.ID.Hex())
-	fmt.Printf("%s - admin\n", admin.ID.Hex())
+	fmt.Printf("%s - user (%s : %s)\n", user.ID.Hex(), user.Email, "uncle_drew11")
+	fmt.Printf("%s - admin (%s : %s)\n", admin.ID.Hex(), admin.Email, "admin")
 
 	hotel := fixtures.AddHotel(store, "The Beverly Hills Hotel",
 		"Los Angeles", nil, 5)

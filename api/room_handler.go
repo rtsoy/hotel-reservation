@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
 	"github.com/rtsoy/hotel-reservation/types"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,6 +23,7 @@ func NewRoomHandler(store *db.Store) *RoomHandler {
 }
 
 func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
+	// TODO : 404
 	rooms, err := h.store.Room.GetRooms(c.Context(), nil)
 	if err != nil {
 		return err
@@ -33,28 +35,22 @@ func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
 func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 	var params types.BookRoomParams
 	if err := c.BodyParser(&params); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(genericResp{
-			Type: "error",
-			Msg:  err.Error(),
-		})
+		return errors.ErrBadRequest()
 	}
 
 	if err := params.Validate(); err != nil {
-		return err
+		return errors.NewError(http.StatusBadRequest, err.Error())
 	}
 
 	roomID := c.Params("id")
 	roomOID, err := primitive.ObjectIDFromHex(roomID)
 	if err != nil {
-		return err
+		return errors.ErrInvalidID()
 	}
 
 	user, ok := getAuthUser(c)
 	if !ok {
-		return c.Status(http.StatusInternalServerError).JSON(genericResp{
-			Type: "error",
-			Msg:  "internal server error",
-		})
+		return errors.ErrUnauthorized()
 	}
 
 	available, err := isRoomAvailableForBooking(c.Context(), h.store.Booking, roomOID, params)
@@ -62,10 +58,7 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 		return err
 	}
 	if !available {
-		return c.Status(http.StatusBadRequest).JSON(genericResp{
-			Type: "error",
-			Msg:  fmt.Sprintf("room %s is already booked", roomID),
-		})
+		return errors.NewError(http.StatusBadRequest, fmt.Sprintf("Room %s is already booked", roomID))
 	}
 
 	booking := &types.Booking{

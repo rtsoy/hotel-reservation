@@ -90,6 +90,10 @@ func (s *MongoUserStore) GetUsers(ctx context.Context) ([]*types.User, error) {
 		return nil, err
 	}
 
+	if len(users) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+
 	return users, nil
 
 }
