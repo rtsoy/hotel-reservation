@@ -6,12 +6,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type UserStore interface {
 	GetUserByID(context.Context, primitive.ObjectID) (*types.User, error)
 	GetUserByEmail(context.Context, string) (*types.User, error)
-	GetUsers(context.Context) ([]*types.User, error)
+	GetUsers(context.Context, *UserQueryParams, *Pagination) ([]*types.User, error)
 	InsertUser(context.Context, *types.User) (*types.User, error)
 	DeleteUser(context.Context, primitive.ObjectID) error
 	UpdateUser(context.Context, bson.M, bson.M) error
@@ -82,8 +83,46 @@ func (s *MongoUserStore) InsertUser(ctx context.Context, user *types.User) (*typ
 	return user, nil
 }
 
-func (s *MongoUserStore) GetUsers(ctx context.Context) ([]*types.User, error) {
-	cur, err := s.collection.Find(ctx, bson.M{})
+type UserQueryParams struct {
+	Pagination
+
+	FirstName string
+	LastName  string
+	Email     string
+	IsAdmin   *bool
+}
+
+func (s *MongoUserStore) GetUsers(ctx context.Context, queryParams *UserQueryParams, pagination *Pagination) ([]*types.User, error) {
+	// Default Pagination Values
+	if pagination.Page == 0 {
+		pagination.Page = int64(defaultPaginationPage)
+	}
+	if pagination.Limit == 0 {
+		pagination.Limit = int64(defaultPaginationLimit)
+	}
+
+	// Check for empty values in filter
+	filter := bson.M{}
+
+	if len(queryParams.FirstName) > 1 {
+		filter["firstName"] = queryParams.FirstName
+	}
+	if len(queryParams.LastName) > 1 {
+		filter["lastName"] = queryParams.LastName
+	}
+	if len(queryParams.Email) > 1 {
+		filter["email"] = queryParams.Email
+	}
+	if queryParams.IsAdmin != nil {
+		filter["isAdmin"] = queryParams.IsAdmin
+	}
+
+	opts := &options.FindOptions{}
+
+	opts.SetSkip((pagination.Page - 1) * pagination.Limit)
+	opts.SetLimit(pagination.Limit)
+
+	cur, err := s.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}

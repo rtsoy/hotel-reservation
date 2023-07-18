@@ -8,7 +8,6 @@ import (
 	myErrors "github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
 	"github.com/rtsoy/hotel-reservation/types"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
@@ -25,7 +24,12 @@ func NewRoomHandler(store *db.Store) *RoomHandler {
 }
 
 func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
-	rooms, err := h.store.Room.GetRooms(c.Context(), nil)
+	var roomQueryParams db.RoomQueryParams
+	if err := c.QueryParser(&roomQueryParams); err != nil {
+		return myErrors.ErrBadRequest()
+	}
+
+	rooms, err := h.store.Room.GetRooms(c.Context(), &roomQueryParams, &roomQueryParams.Pagination)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return myErrors.ErrResourceNotFound()
@@ -34,7 +38,13 @@ func (h *RoomHandler) HandleGetRooms(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(rooms)
+	response := &resourceResponse{
+		Results: len(rooms),
+		Page:    roomQueryParams.Page,
+		Data:    rooms,
+	}
+
+	return c.JSON(response)
 }
 
 func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
@@ -58,7 +68,7 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 		return myErrors.ErrUnauthorized()
 	}
 
-	available, err := isRoomAvailableForBooking(c.Context(), h.store.Booking, roomOID, params)
+	available, err := IsRoomAvailableForBooking(c.Context(), h.store.Booking, roomOID, params)
 	if err != nil {
 		return err
 	}
@@ -82,18 +92,17 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 	return c.JSON(insertedBooking)
 }
 
-func isRoomAvailableForBooking(ctx context.Context, bookingStore db.BookingStore, roomID primitive.ObjectID, params types.BookRoomParams) (bool, error) {
-	filter := bson.M{
-		"roomID": roomID,
-		"fromDate": bson.M{
-			"$lte": params.TillDate,
-		},
-		"tillDate": bson.M{
-			"$gte": params.FromDate,
-		},
+func IsRoomAvailableForBooking(ctx context.Context, bookingStore db.BookingStore, roomID primitive.ObjectID, params types.BookRoomParams) (bool, error) {
+	canceled := false
+
+	bookingQueryParams := db.BookingQueryParams{
+		RoomID:   roomID,
+		FromDate: params.FromDate,
+		TillDate: params.TillDate,
+		Canceled: &canceled,
 	}
 
-	bookings, err := bookingStore.GetBookings(ctx, filter)
+	bookings, err := bookingStore.GetBookings(ctx, &bookingQueryParams, &bookingQueryParams.Pagination)
 	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		return false, err
 	}

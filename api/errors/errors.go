@@ -51,7 +51,7 @@ func ErrResourceNotFound() Error {
 func ErrBadRequest() Error {
 	return Error{
 		Code:    http.StatusBadRequest, // 400
-		Message: "Invalid JSON",
+		Message: "Failed to parse JSON data",
 	}
 }
 

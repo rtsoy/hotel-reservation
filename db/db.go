@@ -10,7 +10,15 @@ const (
 	hotelCollection   = "hotels"
 	roomCollection    = "rooms"
 	userCollection    = "users"
+
+	defaultPaginationPage  = 1
+	defaultPaginationLimit = 10
 )
+
+type Pagination struct {
+	Limit int64
+	Page  int64
+}
 
 type Store struct {
 	User    UserStore

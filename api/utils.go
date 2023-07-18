@@ -5,6 +5,12 @@ import (
 	"github.com/rtsoy/hotel-reservation/types"
 )
 
+type resourceResponse struct {
+	Results int   `json:"results"`
+	Page    int64 `json:"page"`
+	Data    any   `json:"data"`
+}
+
 type genericResp struct {
 	Type string `json:"type"`
 	Msg  string `json:"msg"`

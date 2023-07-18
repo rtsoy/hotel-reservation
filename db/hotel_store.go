@@ -6,12 +6,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type HotelStore interface {
 	InsertHotel(context.Context, *types.Hotel) (*types.Hotel, error)
 	UpdateHotel(context.Context, bson.M, bson.M) error
-	GetHotels(context.Context, bson.M) ([]*types.Hotel, error)
+	GetHotels(context.Context, *HotelQueryParams, *Pagination) ([]*types.Hotel, error)
 	GetHotelByID(context.Context, primitive.ObjectID) (*types.Hotel, error)
 }
 
@@ -42,8 +43,42 @@ func (s *MongoHotelStore) GetHotelByID(ctx context.Context, oid primitive.Object
 	return &hotel, nil
 }
 
-func (s *MongoHotelStore) GetHotels(ctx context.Context, filter bson.M) ([]*types.Hotel, error) {
-	cur, err := s.collection.Find(ctx, filter)
+type HotelQueryParams struct {
+	Pagination
+
+	Rating   int
+	Name     string
+	Location string
+}
+
+func (s *MongoHotelStore) GetHotels(ctx context.Context, queryParams *HotelQueryParams, pagination *Pagination) ([]*types.Hotel, error) {
+	// Default Pagination Values
+	if pagination.Page == 0 {
+		pagination.Page = int64(defaultPaginationPage)
+	}
+	if pagination.Limit == 0 {
+		pagination.Limit = int64(defaultPaginationLimit)
+	}
+
+	// Check for empty values in filter
+	filter := bson.M{}
+
+	if queryParams.Rating >= 1 && queryParams.Rating <= 5 {
+		filter["rating"] = queryParams.Rating
+	}
+	if len(queryParams.Name) > 1 {
+		filter["name"] = queryParams.Name
+	}
+	if len(queryParams.Location) > 1 {
+		filter["location"] = queryParams.Location
+	}
+
+	opts := &options.FindOptions{}
+
+	opts.SetSkip((pagination.Page - 1) * pagination.Limit)
+	opts.SetLimit(pagination.Limit)
+
+	cur, err := s.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}

@@ -119,7 +119,12 @@ func (h *UserHandler) HandleGetUser(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) HandleGetUsers(c *fiber.Ctx) error {
-	users, err := h.userStore.GetUsers(c.Context())
+	var userQueryParams db.UserQueryParams
+	if err := c.QueryParser(&userQueryParams); err != nil {
+		return myErrors.ErrBadRequest()
+	}
+
+	users, err := h.userStore.GetUsers(c.Context(), &userQueryParams, &userQueryParams.Pagination)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return myErrors.ErrResourceNotFound()
@@ -128,5 +133,11 @@ func (h *UserHandler) HandleGetUsers(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(users)
+	response := &resourceResponse{
+		Results: len(users),
+		Page:    userQueryParams.Page,
+		Data:    users,
+	}
+
+	return c.JSON(response)
 }

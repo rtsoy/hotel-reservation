@@ -63,7 +63,12 @@ func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 }
 
 func (h *BookingHandler) HandleGetBookings(c *fiber.Ctx) error {
-	bookings, err := h.store.Booking.GetBookings(c.Context(), nil)
+	var bookingQueryParams db.BookingQueryParams
+	if err := c.QueryParser(&bookingQueryParams); err != nil {
+		return myErrors.ErrBadRequest()
+	}
+
+	bookings, err := h.store.Booking.GetBookings(c.Context(), &bookingQueryParams, &bookingQueryParams.Pagination)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return myErrors.ErrResourceNotFound()
@@ -72,7 +77,13 @@ func (h *BookingHandler) HandleGetBookings(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(bookings)
+	response := &resourceResponse{
+		Results: len(bookings),
+		Page:    bookingQueryParams.Page,
+		Data:    bookings,
+	}
+
+	return c.JSON(response)
 }
 
 func (h *BookingHandler) HandleGetBooking(c *fiber.Ctx) error {

@@ -6,11 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type RoomStore interface {
 	InsertRoom(context.Context, *types.Room) (*types.Room, error)
-	GetRooms(context.Context, bson.M) ([]*types.Room, error)
+	GetRooms(context.Context, *RoomQueryParams, *Pagination) ([]*types.Room, error)
 }
 
 type MongoRoomStore struct {
@@ -35,8 +36,60 @@ func NewMongoTestRoomStore(client *mongo.Client, hotelStore HotelStore) *MongoRo
 	}
 }
 
-func (s *MongoRoomStore) GetRooms(ctx context.Context, filter bson.M) ([]*types.Room, error) {
-	cur, err := s.collection.Find(ctx, filter)
+type RoomQueryParams struct {
+	Pagination
+
+	Size      string
+	Seaside   *bool
+	FromPrice float64
+	ToPrice   float64
+	HotelID   primitive.ObjectID
+}
+
+func (s *MongoRoomStore) GetRooms(ctx context.Context, queryParams *RoomQueryParams, pagination *Pagination) ([]*types.Room, error) {
+	// Default Pagination Values
+	if pagination.Page == 0 {
+		pagination.Page = int64(defaultPaginationPage)
+	}
+	if pagination.Limit == 0 {
+		pagination.Limit = int64(defaultPaginationLimit)
+	}
+
+	// Check for empty values in filter
+	filter := bson.M{}
+
+	if queryParams.Size == "small" || queryParams.Size == "medium" || queryParams.Size == "large" {
+		filter["size"] = queryParams.Size
+	}
+	if queryParams.Seaside != nil {
+		filter["seaside"] = queryParams.Seaside
+	}
+	if queryParams.FromPrice != 0 {
+		filter["price"] = bson.M{
+			"$gte": queryParams.FromPrice,
+		}
+	}
+	if queryParams.ToPrice != 0 {
+		filter["price"] = bson.M{
+			"$lte": queryParams.ToPrice,
+		}
+	}
+	if queryParams.FromPrice != 0 && queryParams.ToPrice != 0 {
+		filter["price"] = bson.M{
+			"$lte": queryParams.ToPrice,
+			"$gte": queryParams.FromPrice,
+		}
+	}
+	if queryParams.HotelID.Hex() != "000000000000000000000000" {
+		filter["hotelID"] = queryParams.HotelID
+	}
+
+	opts := &options.FindOptions{}
+
+	opts.SetSkip((pagination.Page - 1) * pagination.Limit)
+	opts.SetLimit(pagination.Limit)
+
+	cur, err := s.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}

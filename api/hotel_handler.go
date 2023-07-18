@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	myErrors "github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -47,9 +46,12 @@ func (h *HotelHandler) HandleGetRooms(c *fiber.Ctx) error {
 	if err != nil {
 		return myErrors.ErrInvalidID()
 	}
-	filter := bson.M{"hotelID": oid}
 
-	rooms, err := h.store.Room.GetRooms(c.Context(), filter)
+	roomQueryParams := &db.RoomQueryParams{
+		HotelID: oid,
+	}
+
+	rooms, err := h.store.Room.GetRooms(c.Context(), roomQueryParams, &roomQueryParams.Pagination)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return myErrors.ErrResourceNotFound()
@@ -61,20 +63,13 @@ func (h *HotelHandler) HandleGetRooms(c *fiber.Ctx) error {
 	return c.JSON(rooms)
 }
 
-func QueriesToBSON(queries map[string]string) bson.M {
-	res := bson.M{}
-
-	for key, value := range queries {
-		res[key] = value
+func (h *HotelHandler) HandleGetHotels(c *fiber.Ctx) error {
+	var hotelQueryParams db.HotelQueryParams
+	if err := c.QueryParser(&hotelQueryParams); err != nil {
+		return myErrors.ErrBadRequest()
 	}
 
-	return res
-}
-
-func (h *HotelHandler) HandleGetHotels(c *fiber.Ctx) error {
-	filter := QueriesToBSON(c.Queries())
-
-	hotels, err := h.store.Hotel.GetHotels(c.Context(), filter)
+	hotels, err := h.store.Hotel.GetHotels(c.Context(), &hotelQueryParams, &hotelQueryParams.Pagination)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return myErrors.ErrResourceNotFound()
@@ -83,5 +78,11 @@ func (h *HotelHandler) HandleGetHotels(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(hotels)
+	response := &resourceResponse{
+		Results: len(hotels),
+		Page:    hotelQueryParams.Page,
+		Data:    hotels,
+	}
+
+	return c.JSON(response)
 }
