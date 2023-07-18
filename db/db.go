@@ -1,11 +1,19 @@
 package db
 
-const (
-	DBNAME     = "hotel-reservation"
-	TestDBNAME = "hotel-reservation-test"
-	DBURI      = "mongodb://localhost:27017"
-	TestDBURI  = "mongodb://localhost:27017"
+import (
+	"github.com/joho/godotenv"
+	"log"
+	"os"
+)
 
+var (
+	DBNAME     string
+	DBURI      string
+	TestDBNAME string
+	TestDBURI  string
+)
+
+const (
 	bookingCollection = "bookings"
 	hotelCollection   = "hotels"
 	roomCollection    = "rooms"
@@ -25,4 +33,15 @@ type Store struct {
 	Hotel   HotelStore
 	Room    RoomStore
 	Booking BookingStore
+}
+
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("No .env file found")
+	}
+
+	DBNAME = os.Getenv("MONGO_DB_NAME")
+	DBURI = os.Getenv("MONGO_DB_URI")
+	TestDBNAME = os.Getenv("MONGO_TEST_DB_NAME")
+	TestDBURI = os.Getenv("MONGO_TEST_DB_URI")
 }

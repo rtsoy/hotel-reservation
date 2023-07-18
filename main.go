@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"flag"
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
 	"github.com/rtsoy/hotel-reservation/api"
 	"github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/api/middleware"
@@ -12,19 +10,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
+	"os"
 )
 
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
-	}
-}
-
 func main() {
-	listenAddr := flag.String("listenAddr", ":5000", "The listen address of API server")
-	flag.Parse()
-
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(db.DBURI))
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(db.DBURI))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -89,5 +79,6 @@ func main() {
 
 	admin.Get("/booking", bookingHandler.HandleGetBookings)
 
-	log.Fatal(app.Listen(*listenAddr))
+	listenAddr := os.Getenv("LISTEN_ADDR")
+	log.Fatal(app.Listen(listenAddr))
 }
