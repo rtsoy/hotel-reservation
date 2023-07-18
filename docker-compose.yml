@@ -1,0 +1,16 @@
+version: '4.19.0'
+
+services:
+  mongodb:
+    image: mongo
+    container_name: my_mongodb
+    ports:
+      - "27017:27017"
+
+  golang_app:
+    build: .
+    container_name: golang_app
+    ports:
+      - "3000:5000"
+    depends_on:
+      - mongodb
