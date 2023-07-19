@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/api/middleware"
 	"github.com/rtsoy/hotel-reservation/db/fixtures"
 	"github.com/rtsoy/hotel-reservation/types"
@@ -28,7 +29,7 @@ func TestUserCancelNotOwnBooking(t *testing.T) {
 		booking = fixtures.AddBooking(tdb.store, creator.ID, room.ID, 3,
 			time.Now().AddDate(0, 0, 1).UTC(), time.Now().AddDate(0, 0, 8).UTC(), false)
 
-		app   = fiber.New()
+		app   = fiber.New(fiber.Config{ErrorHandler: errors.ErrorHandler})
 		route = app.Group("/", middleware.JWTAuthentication(tdb.store.User))
 
 		bookingHandler = NewBookingHandler(tdb.store)
@@ -46,22 +47,19 @@ func TestUserCancelNotOwnBooking(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("expected status code 403 but got %d", resp.StatusCode)
+	expectedError := errors.ErrForbidden()
+
+	if resp.StatusCode != expectedError.Code {
+		t.Fatalf("expected http status code %d but got %d", expectedError.Code, resp.StatusCode)
 	}
 
-	var response genericResp
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	var errorResponse errors.Error
+	if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
 		t.Fatal(err)
 	}
 
-	expectedResponse := genericResp{
-		Type: "error",
-		Msg:  "not allowed",
-	}
-
-	if !reflect.DeepEqual(response, expectedResponse) {
-		t.Fatal("the response does not match an expected response")
+	if !reflect.DeepEqual(expectedError, errorResponse) {
+		t.Fatal("the error does not match an expected error")
 	}
 }
 
@@ -102,14 +100,13 @@ func TestAdminCancelNotOwnBooking(t *testing.T) {
 		t.Fatalf("expected status code 200 but got %d", resp.StatusCode)
 	}
 
-	var response genericResp
+	var response map[string]string
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
 
-	expectedResponse := genericResp{
-		Type: "msg",
-		Msg:  "updated",
+	expectedResponse := map[string]string{
+		"updated": booking.ID.Hex(),
 	}
 
 	if !reflect.DeepEqual(response, expectedResponse) {
@@ -152,14 +149,13 @@ func TestUserCancelOwnBooking(t *testing.T) {
 		t.Fatalf("expected status code 200 but got %d", resp.StatusCode)
 	}
 
-	var response genericResp
+	var response map[string]string
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
 
-	expectedResponse := genericResp{
-		Type: "msg",
-		Msg:  "updated",
+	expectedResponse := map[string]string{
+		"updated": booking.ID.Hex(),
 	}
 
 	if !reflect.DeepEqual(response, expectedResponse) {
@@ -182,7 +178,7 @@ func TestUserGetNotOwnBooking(t *testing.T) {
 		booking = fixtures.AddBooking(tdb.store, creator.ID, room.ID, 3,
 			time.Now().AddDate(0, 0, 1).UTC(), time.Now().AddDate(0, 0, 8).UTC(), false)
 
-		app   = fiber.New()
+		app   = fiber.New(fiber.Config{ErrorHandler: errors.ErrorHandler})
 		route = app.Group("/", middleware.JWTAuthentication(tdb.store.User))
 
 		bookingHandler = NewBookingHandler(tdb.store)
@@ -200,22 +196,19 @@ func TestUserGetNotOwnBooking(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("expected status code 403 but got %d", resp.StatusCode)
+	expectedError := errors.ErrForbidden()
+
+	if resp.StatusCode != expectedError.Code {
+		t.Fatalf("expected http status code %d but got %d", expectedError.Code, resp.StatusCode)
 	}
 
-	var response genericResp
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	var errorResponse errors.Error
+	if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
 		t.Fatal(err)
 	}
 
-	expectedResponse := genericResp{
-		Type: "error",
-		Msg:  "not allowed",
-	}
-
-	if !reflect.DeepEqual(response, expectedResponse) {
-		t.Fatal("the response does not match an expected response")
+	if !reflect.DeepEqual(expectedError, errorResponse) {
+		t.Fatal("the error does not match an expected error")
 	}
 }
 
@@ -327,7 +320,7 @@ func TestNoTokenGetBookings(t *testing.T) {
 		_ = fixtures.AddBooking(tdb.store, user.ID, room.ID, 3,
 			time.Now().AddDate(0, 0, 10).UTC(), time.Now().AddDate(0, 0, 17).UTC(), false)
 
-		app   = fiber.New()
+		app   = fiber.New(fiber.Config{ErrorHandler: errors.ErrorHandler})
 		admin = app.Group("/", middleware.JWTAuthentication(tdb.store.User), middleware.AdminAuth)
 
 		bookingHandler = NewBookingHandler(tdb.store)
@@ -344,17 +337,19 @@ func TestNoTokenGetBookings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected status code 403 but got %d", resp.StatusCode)
+	expectedError := errors.ErrNoToken()
+
+	if resp.StatusCode != expectedError.Code {
+		t.Fatalf("expected http status code %d but got %d", expectedError.Code, resp.StatusCode)
 	}
 
-	var response string
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	var errorResponse errors.Error
+	if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
 		t.Fatal(err)
 	}
 
-	if response != "no token" {
-		t.Fatalf("expected `no token` response message but got %s", response)
+	if !reflect.DeepEqual(expectedError, errorResponse) {
+		t.Fatal("the error does not match an expected error")
 	}
 }
 
@@ -374,7 +369,7 @@ func TestNonAdminGetBookings(t *testing.T) {
 		_ = fixtures.AddBooking(tdb.store, user.ID, room.ID, 3,
 			time.Now().AddDate(0, 0, 10).UTC(), time.Now().AddDate(0, 0, 17).UTC(), false)
 
-		app   = fiber.New()
+		app   = fiber.New(fiber.Config{ErrorHandler: errors.ErrorHandler})
 		admin = app.Group("/", middleware.JWTAuthentication(tdb.store.User), middleware.AdminAuth)
 
 		bookingHandler = NewBookingHandler(tdb.store)
@@ -391,17 +386,19 @@ func TestNonAdminGetBookings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("expected status code 403 but got %d", resp.StatusCode)
+	expectedError := errors.ErrForbidden()
+
+	if resp.StatusCode != expectedError.Code {
+		t.Fatalf("expected http status code %d but got %d", expectedError.Code, resp.StatusCode)
 	}
 
-	var response string
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	var errorResponse errors.Error
+	if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
 		t.Fatal(err)
 	}
 
-	if response != "forbidden" {
-		t.Fatalf("expected `forbidden` response message but got %s", response)
+	if !reflect.DeepEqual(expectedError, errorResponse) {
+		t.Fatal("the error does not match an expected error")
 	}
 }
 
@@ -418,9 +415,9 @@ func TestAdminGetBookings(t *testing.T) {
 		hotel = fixtures.AddHotel(tdb.store, "testHotel", "Testestan", nil, 4)
 		room  = fixtures.AddRoom(tdb.store, "medium", true, 199.9, hotel.ID)
 
-		booking1 = fixtures.AddBooking(tdb.store, user.ID, room.ID, 3,
+		_ = fixtures.AddBooking(tdb.store, user.ID, room.ID, 3,
 			time.Now().AddDate(0, 0, 1).UTC(), time.Now().AddDate(0, 0, 8).UTC(), false)
-		booking2 = fixtures.AddBooking(tdb.store, user.ID, room.ID, 3,
+		_ = fixtures.AddBooking(tdb.store, user.ID, room.ID, 3,
 			time.Now().AddDate(0, 0, 10).UTC(), time.Now().AddDate(0, 0, 17).UTC(), false)
 
 		app   = fiber.New()
@@ -444,19 +441,12 @@ func TestAdminGetBookings(t *testing.T) {
 		t.Fatalf("expected status code 200 but got %d", resp.StatusCode)
 	}
 
-	var bookings []*types.Booking
-	if err := json.NewDecoder(resp.Body).Decode(&bookings); err != nil {
+	var response resourceResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(bookings) != 2 {
-		t.Fatalf("expected response length of 2 but got %d", len(bookings))
-	}
-
-	if booking1.ID != bookings[0].ID {
-		t.Fatalf("expected booking id %s but got %s", booking1.ID.Hex(), bookings[0].ID.Hex())
-	}
-	if booking2.ID != bookings[1].ID {
-		t.Fatalf("expected booking id %s but got %s", booking2.ID, bookings[1].ID)
+	if response.Results != 2 {
+		t.Fatalf("expected results 2 but got %d", response.Results)
 	}
 }

@@ -56,9 +56,8 @@ func (h *BookingHandler) HandleCancelBooking(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(genericResp{
-		Type: "msg",
-		Msg:  "updated",
+	return c.JSON(map[string]string{
+		"updated": id,
 	})
 }
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rtsoy/hotel-reservation/api/errors"
 	"github.com/rtsoy/hotel-reservation/db/fixtures"
 	"net/http"
 	"net/http/httptest"
@@ -62,7 +63,7 @@ func TestAuthenticateWithWrongPasswordFailure(t *testing.T) {
 	_ = fixtures.AddUser(tdb.store, "James", "Harden",
 		"jamesHarden13@example.com", "super_secret_password", false)
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{ErrorHandler: errors.ErrorHandler})
 	authHandler := NewAuthHandler(tdb.store.User)
 	app.Post("/auth", authHandler.HandleAuthenticate)
 
@@ -79,20 +80,19 @@ func TestAuthenticateWithWrongPasswordFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if uint(resp.StatusCode) != fiber.StatusBadRequest {
-		t.Fatalf("expected http status code %d but got %d", fiber.StatusInternalServerError, resp.StatusCode)
+
+	expectedError := errors.ErrWrongCredentials()
+
+	if resp.StatusCode != expectedError.Code {
+		t.Fatalf("expected http status code %d but got %d", expectedError.Code, resp.StatusCode)
 	}
 
-	var genResp genericResp
-	if err := json.NewDecoder(resp.Body).Decode(&genResp); err != nil {
+	var errorResponse errors.Error
+	if err := json.NewDecoder(resp.Body).Decode(&errorResponse); err != nil {
 		t.Fatal(err)
 	}
 
-	if genResp.Type != "error" {
-		t.Fatalf("expected response type to be `error` but got %s", genResp.Type)
-	}
-
-	if genResp.Msg != "invalid credentials" {
-		t.Fatalf("expected response message to be `invalid credentials` but got %s", genResp.Msg)
+	if !reflect.DeepEqual(expectedError, errorResponse) {
+		t.Fatal("the error does not match an expected error")
 	}
 }

@@ -11,11 +11,6 @@ type resourceResponse struct {
 	Data    any   `json:"data"`
 }
 
-type genericResp struct {
-	Type string `json:"type"`
-	Msg  string `json:"msg"`
-}
-
 func getAuthUser(c *fiber.Ctx) (*types.User, bool) {
 	user, ok := c.Context().UserValue("user").(*types.User)
 	return user, ok

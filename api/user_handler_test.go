@@ -79,13 +79,13 @@ func TestGetUsers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var users *[]types.User
-	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+	var response resourceResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(*users) != 2 {
-		t.Fatalf("expected %d length of response but got %d", 2, len(*users))
+	if response.Results != 2 {
+		t.Fatalf("expected results 2 but got %d", response.Results)
 	}
 }
 

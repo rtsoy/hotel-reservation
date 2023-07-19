@@ -36,7 +36,7 @@ type Store struct {
 }
 
 func init() {
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load(); err != nil { // ../.env for tests
 		log.Fatal("No .env file found")
 	}
 
