@@ -89,7 +89,7 @@ func (h *RoomHandler) HandleBookRoom(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(insertedBooking)
+	return c.Status(http.StatusCreated).JSON(insertedBooking)
 }
 
 func IsRoomAvailableForBooking(ctx context.Context, bookingStore db.BookingStore, roomID primitive.ObjectID, params types.BookRoomParams) (bool, error) {

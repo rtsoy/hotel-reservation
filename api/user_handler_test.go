@@ -35,6 +35,10 @@ func TestPostUser(t *testing.T) {
 		t.Error(err)
 	}
 
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected status code 201 but got %d", resp.StatusCode)
+	}
+
 	var user types.User
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		t.Error(err)
@@ -79,6 +83,10 @@ func TestGetUsers(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status code 200 but got %d", resp.StatusCode)
+	}
+
 	var response resourceResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatal(err)
@@ -108,6 +116,10 @@ func TestGetUser(t *testing.T) {
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Error(err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status code 200 but got %d", resp.StatusCode)
 	}
 
 	var user *types.User
@@ -156,6 +168,10 @@ func TestUpdateUser(t *testing.T) {
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status code 200 but got %d", resp.StatusCode)
 	}
 
 	var updatedResponse map[string]string

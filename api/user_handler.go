@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"net/http"
 )
 
 type UserHandler struct {
@@ -70,6 +71,7 @@ func (h *UserHandler) HandleDeleteUser(c *fiber.Ctx) error {
 		return err
 	}
 
+	// ??? 204 ???
 	return c.JSON(map[string]string{
 		"deleted": id,
 	})
@@ -95,7 +97,7 @@ func (h *UserHandler) HandlePostUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(insertedUser)
+	return c.Status(http.StatusCreated).JSON(insertedUser)
 }
 
 func (h *UserHandler) HandleGetUser(c *fiber.Ctx) error {
